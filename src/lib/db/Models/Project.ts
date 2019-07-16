@@ -24,4 +24,5 @@ const ProjectSchema: Schema = new Schema({
     author: {type: String, required: true, default: process.env.OWNER}
 })
 
-export default mongoose.model<IProject>("Project", ProjectSchema)
+const projectModel = mongoose.model<IProject>("Project", ProjectSchema)
+export default projectModel
