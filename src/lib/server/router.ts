@@ -1,77 +1,94 @@
-import {Router, Request, Response} from 'express'
+import {Router, Request, Response, NextFunction} from 'express'
 import {Model, Error} from 'mongoose'
-
-interface ICRUDRouter{
-    collection: Model<any, {}>
-    router: Router
-}
+import {ICRUDRouter, IHandlers} from '../interfaces/IRouter'
 
 export class CRUDRouter implements ICRUDRouter{
     collection: Model<any, {}>
     router: Router
-    constructor(collection: any){
+    middleware: any
+    handlers: any
+    constructor(collection: any, middleware:any, handlers: IHandlers){
         this.collection = collection
         this.router = Router()
+        this.middleware = middleware
+        this.handlers = handlers
         // Read All Route
-        this.router.get('/', (req: Request, res: Response) => {
-            this.collection.find()
-            .then(allResults => res.json(allResults))
-            .catch(err => console.error(err))
-        })
+        this.router.get('/', this.middleware, handlers.get)
         // Read Route
-        this.router.get('/:id', (req: Request, res: Response) => {
-            this.collection.findById(req.params.id, 
+        this.router.get('/:id', this.middleware, handlers.getById)
+        // Create Route
+        this.router.post('/', this.middleware, handlers.post)
+        // Update Route
+        this.router.put('/:id', this.middleware, handlers.put)
+        // Destroy Route
+        this.router.delete('/:id', this.middleware, handlers.delete)
+    }
+}
+
+export default (collection: Model<any, {}>, customMiddleware?: any, customHandlers:IHandlers = {}) => {
+    let middleware = (req: Request, res: Response, next: NextFunction) => next()
+    middleware = customMiddleware ? customMiddleware : middleware
+    const handlers = {
+        get: (req: Request, res: Response) => {
+            collection.find()
+            .then(allResults => res.status(200).json(allResults))
+            .catch(err => {
+                console.error(err)
+                res.status(500).send(err)
+            })
+        },
+        getById: (req: Request, res: Response) => {
+            collection.findById(req.params.id, 
                 (err: Error, foundEntry: Model<any, {}>) => 
             {
                 if(err) {
                     console.error(err)
-                    res.send(err)
-                } else res.json(foundEntry)
+                    res.status(500).send(err)
+                } else res.status(200).json(foundEntry)
             })
-        })
-        // Create Route
-        this.router.post('/', (req: Request, res:Response) => {
-            this.collection.create(req.body)
+        },
+        post: (req: Request, res:Response) => {
+            collection.create(req.body)
             .then(createdEntry => {
                 console.log(createdEntry)
                 createdEntry.save()
-                res.send(`Created new entry`)
+                res.status(201).send(`Created new entry`)
             })
             .catch(err => {
                 console.error(err)
-                res.send(`Error: ${err}`)
+                res.status(500).send('Unable to create entry')
             })
-        })
-        // Update Route
-        this.router.put('/:id', (req: Request, res: Response) => {
-            this.collection.findOne({_id: req.params.id}, (err, foundEntry) => {
+        },
+        put: (req: Request, res: Response) => {
+            collection.findOne({_id: req.params.id}, (err, foundEntry) => {
                 if(err){
                     console.error(err)
-                    res.send(`Unable to find entry`)
+                    res.status(500).send(`Unable to find entry`)
                 } else {
                     foundEntry.update(req.body, (err: Error) => {
                         if(err) {
                             console.error(err)
-                            res.send(err)
+                            res.status(500).send(`Unable to update entry`)
                         } else {
-                            res.send(`Entry Updated: ${req.params.id}`)
+                            res.status(200).send('Entry Updated')
                         }
                     })
                 }
             })
-        })
-        // Destroy Route
-        this.router.delete('/:id', (req: Request, res: Response) => {
-            this.collection.findByIdAndRemove(req.params.id, (err, res) => {
+        },
+        delete: (req: Request, res: Response) => {
+            collection.findByIdAndRemove(req.params.id, (err) => {
                 if(err) {
-                    console.log(err)
-                    res.send(err)
-                } else res.send(`Deleted entry`)
+                    console.error(err)
+                    res.status(500).send('Unable to DELETE entry')
+                } else res.status(200).send(`Deleted entry`)
             })
-        })
+        }
     }
-}
-
-export default (collection: Model<any, {}>) => {
-    return new CRUDRouter(collection).router
+    handlers.get = customHandlers.get ? customHandlers.get : handlers.get
+    handlers.getById = customHandlers.getById ? customHandlers.getById : handlers.getById
+    handlers.post = customHandlers.post ? customHandlers.post : handlers.post
+    handlers.put = customHandlers.put ? customHandlers.put : handlers.put
+    handlers.delete = customHandlers.delete ? customHandlers.delete : handlers.delete
+    return new CRUDRouter(collection, middleware, handlers).router
 }
