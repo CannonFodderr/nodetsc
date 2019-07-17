@@ -1,13 +1,11 @@
 import {Router} from 'express'
-import userRoutes from './userRoutes'
-import projectRoutes from './projectRoutes'
 import User from '../../lib/db/Models/User'
-import userRouter from '../../lib/server/router'
-const router = Router()
-console.log(userRouter(User))
+import Project from '../../lib/db/Models/Project'
+import CRUDRouter from '../../lib/server/router'
 
-router.use('/user', userRouter(User))
-// router.use('/user', userRoutes)
-router.use('/project', projectRoutes)
+const router = Router()
+
+router.use('/user', CRUDRouter(User))
+router.use('/project', CRUDRouter(Project))
 
 export default router
