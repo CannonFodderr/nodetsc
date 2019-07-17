@@ -9,6 +9,7 @@ export interface ICRUDRouter{
 }
 
 export interface IHandlers {
+    [key: string]: object;
     get?: any
     getById?: any
     post?: any

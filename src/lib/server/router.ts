@@ -28,7 +28,7 @@ export class CRUDRouter implements ICRUDRouter{
 export default (collection: Model<any, {}>, customMiddleware?: any, customHandlers:IHandlers = {}) => {
     let middleware = (req: Request, res: Response, next: NextFunction) => next()
     middleware = customMiddleware ? customMiddleware : middleware
-    const handlers = {
+    const handlers: IHandlers = {
         get: (req: Request, res: Response) => {
             collection.find()
             .then(allResults => res.status(200).json(allResults))
@@ -85,10 +85,6 @@ export default (collection: Model<any, {}>, customMiddleware?: any, customHandle
             })
         }
     }
-    handlers.get = customHandlers.get ? customHandlers.get : handlers.get
-    handlers.getById = customHandlers.getById ? customHandlers.getById : handlers.getById
-    handlers.post = customHandlers.post ? customHandlers.post : handlers.post
-    handlers.put = customHandlers.put ? customHandlers.put : handlers.put
-    handlers.delete = customHandlers.delete ? customHandlers.delete : handlers.delete
+    Object.keys(customHandlers).forEach(key => handlers[key] = customHandlers[key])
     return new CRUDRouter(collection, middleware, handlers).router
 }
